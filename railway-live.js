@@ -19,6 +19,7 @@
   window.dispatchEvent(new CustomEvent('liangce:web-status',{detail:{message:text,state:error||stale?'error':'ready'}}));
   const code=window.LiangceCharts?.getSnapshot()?.code,quote=result?.quotes?.[code],line=document.querySelector('#cloud-chart-quote');
   if(line&&quote)line.textContent=`${quote.name||code} ${code} · ${quote.stale||error?'上次报价':'行情报价'} ¥${quote.price.toFixed(2)} · ${quote.change==null?'涨幅未提供':(quote.change>=0?'+':'')+quote.change.toFixed(2)+'%'} · ${time(quote.market_time)}`;
+  else if(line&&code)line.textContent=`${code} · 正在获取该股票的行情报价…`;
  }
  async function refresh(force=false){
   if(document.hidden||busy)return;
