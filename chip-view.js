@@ -1,6 +1,6 @@
 (() => {
  'use strict';const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- let panel,result=null,profile=null,windowSize=120;
+ let panel,result=null,profile=null,windowSize=120,quote=null;
  const money=n=>n==null?'—':n.toFixed(n<1?3:2),periodNames={day:'日线',week:'周线',month:'月线','1m':'1分钟','5m':'5分钟','15m':'15分钟','30m':'30分钟','60m':'60分钟'};
  function mount(plotWrap){
   const layout=document.createElement('div');layout.className='cs-chip-layout';plotWrap.before(layout);layout.append(plotWrap);
@@ -12,7 +12,8 @@
   if(!panel)return;const plot=$('#cs-chip-plot'),stats=$('#cs-chip-stats');stats.replaceChildren();$('#cs-chip-coverage').textContent='';
   if(!result){profile=null;plot.innerHTML='<div class="cs-chip-empty">选择股票后计算筹码峰</div>';plot.setAttribute('aria-label','等待筹码分布');$('#cs-chip-source').textContent='等待K线';return;}
   $('#cs-chip-source').textContent=`${result.code} · ${periodNames[result.period]||result.period}`;
-  try{profile=window.LiangceChipProfile.calculate(result.bars,{windowSize});}catch(error){profile={ok:false,message:error.message};}
+  const referenceQuote=quote&&!quote.stale&&quote.market_time?.slice(0,10)>=result.as_of?.slice(0,10)?quote:null;
+  try{profile=window.LiangceChipProfile.calculate(result.bars,{windowSize,includeForming:result.live===true,referencePrice:referenceQuote?.price});}catch(error){profile={ok:false,message:error.message};}
   if(!profile.ok){plot.innerHTML=`<div class="cs-chip-empty">${esc(profile.message)}</div>`;plot.setAttribute('aria-label',profile.message);return;}
   const p=profile,W=260,H=320,top=18,bottom=296,left=63,right=241,pad=p.low===p.high?Math.max(p.low*.02,.01):0,lo=p.low-pad,hi=p.high+pad;
   const y=price=>bottom-(price-lo)/(hi-lo)*(bottom-top),max=p.peak.volume;
@@ -26,6 +27,9 @@
   plot.setAttribute('aria-label',`筹码峰估算，最高量价档${money(p.peak.low)}至${money(p.peak.high)}，末根收盘${money(p.lastClose)}`);
   stats.innerHTML=[['主峰价档',`${money(p.peak.low)}～${money(p.peak.high)}`],['70%成交区',`${money(p.central70[0])}～${money(p.central70[1])}`],['价量均价',money(p.weightedPrice)],['低于末收占比',p.belowLastShare==null?'—':(p.belowLastShare*100).toFixed(1)+'%']].map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong></div>`).join('');
   $('#cs-chip-coverage').textContent=`${p.first} 至 ${p.last}；${p.usedBars}/${p.selectedBars} 根有效K线${p.omittedBars?`，${p.omittedBars}根无有效成交量或价格已排除`:''}。价格口径：${result.adjustment||'未记录'}。${p.peakCount>1?`最高量有${p.peakCount}个并列价档，主峰标出最低价档。`:''}`;
+  if(result.live){$('#cs-chip-source').textContent+=` · 自动更新${p.formingBars?' · 盘中估算':''}`;$('#cs-chip-coverage').textContent+=` 实时取数 ${result.fetched_at||result.computed_at}；含${p.formingBars}根未收盘K线，随成交量变化，不参与信号确认。`;}
+  if(referenceQuote){plot.innerHTML=plot.innerHTML.replaceAll('末收','现价');stats.innerHTML=stats.innerHTML.replaceAll('末收','现价');plot.setAttribute('aria-label',plot.getAttribute('aria-label').replace('末根收盘','最新报价'));}
+  $('.cs-chip-legend').children[0].textContent=referenceQuote?'低于现价':'低于末收';$('.cs-chip-legend').children[1].textContent=referenceQuote?'高于现价':'高于末收';
  }
- window.LiangceChipView={mount,setResult(value){if(result===value)return;result=value;render();},state:()=>({code:result?.code,period:result?.period,windowSize,profile})};
+ window.LiangceChipView={mount,setResult(value){if(result===value)return;if(result?.code!==value?.code)quote=null;result=value;render();},setQuote(value){if(!result||value.code!==result.code||quote?.price===value.price&&quote?.market_time===value.market_time&&quote?.stale===value.stale)return;quote=value;render();},state:()=>({code:result?.code,period:result?.period,windowSize,profile})};
 })();

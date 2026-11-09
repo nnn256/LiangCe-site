@@ -52,6 +52,12 @@
   const close=document.createElement('button');close.className='quiet-button';close.textContent='关闭';close.onclick=()=>dialog.close();dialog.append(close);dialog.showModal();return {ok:true};
  }
  const staticAPI={
+  async get_live_panel(code,period='day'){
+   window.LiangceChanLiveModel.validate(String(code),period);
+   if(!config.live_api)throw Error('尚未配置实时行情后台');
+   const symbol=LiangceRailway.symbol(code),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),65000);
+   try{const response=await fetch(new URL('/api/research/live-panel/'+symbol+'/'+period,config.live_api),{cache:'no-store',credentials:'omit',signal:controller.signal});const value=await response.json();if(!response.ok)throw Error(typeof value.detail==='string'?value.detail:'实时K线服务暂不可用');return value;}finally{clearTimeout(timer);}
+  },
   async get_chan_summary(){return json('data/chan-summary.json');},
   async get_chan_result(code,period='day',force=false){
    if(!/^\d{6}$/.test(String(code))||!['day','week','month','1m','5m','15m','30m','60m','quarter','year','5d'].includes(period))throw Error('股票或周期无效');

@@ -1,16 +1,16 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.LiangceChipProfile=api;})(typeof globalThis!=='undefined'?globalThis:this,()=>{
  'use strict';
- function calculate(bars,{windowSize=120,binCount=72}={}){
+ function calculate(bars,{windowSize=120,binCount=72,includeForming=false,referencePrice=null}={}){
   if(!Array.isArray(bars))throw new TypeError('K线必须为数组');
   if(!Number.isInteger(windowSize)||windowSize<0||!Number.isInteger(binCount)||binCount<8||binCount>256)throw new RangeError('分布参数无效');
-  const closed=bars.filter(b=>b&&b.is_closed!==false&&b.closed!==false),rows=windowSize?closed.slice(-windowSize):closed;
+  const closed=bars.filter(b=>b&&(includeForming||(b.is_closed!==false&&b.closed!==false))),rows=windowSize?closed.slice(-windowSize):closed;
   const usable=rows.filter(b=>[b.open,b.high,b.low,b.close,b.volume].every(Number.isFinite)&&b.low>0&&b.volume>0&&b.high>=Math.max(b.open,b.close,b.low)&&b.low<=Math.min(b.open,b.close));
-  const base={method:'ohlcv_uniform_volume_profile',holding_cost_verified:false,selectedBars:rows.length,usedBars:usable.length,omittedBars:rows.length-usable.length};
+  const base={method:'ohlcv_uniform_volume_profile',holding_cost_verified:false,selectedBars:rows.length,usedBars:usable.length,omittedBars:rows.length-usable.length,formingBars:usable.filter(b=>b.is_closed===false||b.closed===false).length};
   if(!usable.length)return {...base,ok:false,message:'没有可用的正成交量K线，无法估算筹码峰',bins:[]};
   let low=Infinity,high=-Infinity,total=0;
   for(const b of usable){low=Math.min(low,b.low);high=Math.max(high,b.high);total+=b.volume;}
   if(!Number.isFinite(total))throw new RangeError('成交量合计超出范围');
-  const last=rows.at(-1),lastClose=Number.isFinite(last?.close)&&last.close>0?last.close:null;
+  const last=rows.at(-1),lastClose=Number.isFinite(referencePrice)&&referencePrice>0?referencePrice:Number.isFinite(last?.close)&&last.close>0?last.close:null;
   // A flat market is a point mass, not an invented spread around the price.
   const flat=low===high,step=flat?0:(high-low)/binCount;
   const bins=Array.from({length:flat?1:binCount},(_,i)=>({low:low+i*step,high:flat?high:low+(i+1)*step,price:flat?low:low+(i+.5)*step,volume:0}));
