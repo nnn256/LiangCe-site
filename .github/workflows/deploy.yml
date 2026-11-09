@@ -28,6 +28,8 @@ jobs:
           for item in root.iterdir():
               if item.is_file() and item.suffix in {'.html','.js','.css'}:shutil.copy2(item,out/item.name)
           shutil.copytree(root/'vendor',out/'vendor')
+          (out/'data').mkdir()
+          for item in (root/'data').glob('*.json'):shutil.copy2(item,out/'data'/item.name)
           (out/'.nojekyll').write_text('')
           commit=os.environ['GITHUB_SHA'];repo=os.environ['GITHUB_REPOSITORY']
           config={'mode':'snapshot','live_api':'https://liangce-v3-api-production.up.railway.app','data_base':f'https://raw.githubusercontent.com/{repo}/{commit}/'}
