@@ -5,7 +5,8 @@
  const cloud=snapshotMode&&config.live_api?LiangceRailway.create({baseUrl:config.live_api}):null;
  let manifest,market,scores,params={},generation=0,issueRevision=0,tokenId=0,pending=null,paused=false,completed={},issues={},queue=[],initializing,downloaded=new Map(),exports=[];
  const announce=(message,state='ready')=>window.dispatchEvent(new CustomEvent('liangce:web-status',{detail:{message,state}}));
- const json=async path=>{const response=await fetch(path,{cache:'no-store'});if(!response.ok)throw Error(response.status===404?'尚未发布这份数据':'数据读取失败 '+response.status);return response.json();};
+ const dataPath=path=>config.data_base?new URL(path,config.data_base).href:path;
+ const json=async path=>{const response=await fetch(dataPath(path),{cache:'no-store'});if(!response.ok)throw Error(response.status===404?'尚未发布这份数据':'数据读取失败 '+response.status);return response.json();};
  async function initialize(force=false){
   if(force){initializing=null;downloaded.clear();}
   if(!initializing)initializing=(async()=>{
@@ -62,7 +63,7 @@
   async get_chan_result(code,period='day',force=false){
    if(!/^\d{6}$/.test(String(code))||!['day','week','month','1m','5m','15m','30m','60m','quarter','year','5d'].includes(period))throw Error('股票或周期无效');
    if(force)throw Error('网页的全市场缠论结果随发布重算；即时重新计算请在桌面端使用');
-   const response=await fetch(`data/chan/${code}-${period}.json.gz`,{cache:'no-store'});if(!response.ok)throw Error('该股票周期尚无缠论结果');
+   const response=await fetch(dataPath(`data/chan/${code}-${period}.json.gz`),{cache:'no-store'});if(!response.ok)throw Error('该股票周期尚无缠论结果');
    const stream=new Blob([await response.arrayBuffer()]).stream().pipeThrough(new DecompressionStream('gzip'));return new Response(stream).json();
   },
   async start_background(){await initialize();return {ok:true};},

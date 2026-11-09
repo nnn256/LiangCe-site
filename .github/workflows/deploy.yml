@@ -20,9 +20,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Prepare interface with immutable snapshot URLs
+        run: |
+          python - <<'PY'
+          import os, pathlib, re, shutil, json
+          root=pathlib.Path('.');out=root/'_pages';out.mkdir()
+          for item in root.iterdir():
+              if item.is_file() and item.suffix in {'.html','.js','.css'}:shutil.copy2(item,out/item.name)
+          shutil.copytree(root/'vendor',out/'vendor')
+          (out/'.nojekyll').write_text('')
+          commit=os.environ['GITHUB_SHA'];repo=os.environ['GITHUB_REPOSITORY']
+          config={'mode':'snapshot','live_api':'https://liangce-v3-api-production.up.railway.app','data_base':f'https://raw.githubusercontent.com/{repo}/{commit}/'}
+          (out/'web-config.js').write_text('window.LIANGCE_WEB_CONFIG='+json.dumps(config)+';\n')
+          index=out/'index.html';index.write_text(re.sub(r'\?v=[a-f0-9]+', '?v='+commit, index.read_text()))
+          print('Pages interface bytes:',sum(p.stat().st_size for p in out.rglob('*') if p.is_file()))
+          PY
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _pages
       - name: Deploy
         id: deployment
         uses: actions/github-script@v7
