@@ -3,6 +3,7 @@
  const cloud=window.LiangceWeb?.cloud;if(!cloud)return;
  let busy=false,next=0,lastKey='',version=0,lastResult=null,lastError=null,requests=0;
  const visible=()=>{
+  if(window.LiangceChan?.state().visible)return LiangceChan.state().visibleCodes;
   const marketVisible=!document.querySelector('#market-screen').hidden,chartVisible=!document.querySelector('#tv-chart-screen').hidden;
   const codes=marketVisible?LiangceApp.getMarketView().rows.map(r=>r.code):[];
   if(marketVisible&&LiangceApp.selectedCode())codes.push(LiangceApp.selectedCode());
@@ -27,8 +28,8 @@
   if(!force&&key===lastKey&&Date.now()<next)return;
   busy=true;lastKey=key;const current=++version;requests++;
   try{const result=await cloud.quotes(codes);if(current!==version)return;
-   lastResult=result;lastError=null;LiangceApp.applyLiveQuotes(result.quotes,result.missing);next=Date.now()+result.refresh_after_seconds*1000;status(result);
-  }catch(error){lastError=error.message;LiangceApp.markQuotesStale(codes);next=Date.now()+30000;status(lastResult,error);}
+   lastResult=result;lastError=null;LiangceApp.applyLiveQuotes(result.quotes,result.missing);window.LiangceChan?.applyQuotes(result.quotes);next=Date.now()+result.refresh_after_seconds*1000;status(result);
+  }catch(error){lastError=error.message;LiangceApp.markQuotesStale(codes);window.LiangceChan?.applyQuotes(Object.fromEntries(Object.entries(lastResult?.quotes||{}).map(([k,v])=>[k,{...v,stale:true}])));next=Date.now()+30000;status(lastResult,error);}
   finally{busy=false;}
  }
  const select=document.createElement('select');select.id='cloud-history-mode';select.className='select';select.setAttribute('aria-label','K线数据来源');

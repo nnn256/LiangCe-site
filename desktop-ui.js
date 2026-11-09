@@ -48,6 +48,7 @@
   function renderMarket(data) {
     market=data; window.liangceLiveMarket=data;
     window.LiangceApp.loadMarket(data);
+    window.LiangceChan?.applyQuotes(Object.fromEntries(data.rows.map(row=>[row.code,row])));
     $('#live-count').textContent=fmt(data.total_quotes);
     $('#live-source').textContent=data.cached?'上次行情缓存':'通达信报价已获取';
     $('#live-breadth').textContent=`${data.rows.filter(row=>row.change>0).length} / ${data.rows.filter(row=>row.change<0).length}`;
