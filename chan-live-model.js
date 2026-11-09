@@ -18,7 +18,10 @@
    unique.set(date,{date,open:b.open,high:b.high,low:b.low,close:b.close,volume:b.volume,is_closed:b.is_closed});
   }
   const bars=[...unique.values()].sort((a,b)=>a.date.localeCompare(b.date));if(!bars.length)throw Error('实时接口没有返回K线');
-  return {ok:true,code,period,name:panel.name||code,bars,bar_count:bars.length,first:bars[0].date,as_of:bars.at(-1).date,computed_at:panel.computed_at,fetched_at:panel.fetched_at||panel.computed_at,source:panel.provenance?.source||'Railway',adjustment:panel.provenance?.adjustment||'provider_unspecified',volume_unit:panel.provenance?.volume_unit||'source_native',input_sha256:panel.coverage?.input_sha256,forming_bars:bars.filter(b=>!b.is_closed).length,refresh_after_ms:interval(now),live:true};
+  const analysis=panel.workbench_analysis;
+  if(analysis&&analysis.profile!=='chan_recursive_causal_v3_class_boundaries')throw Error('实时结构算法版本不匹配');
+  if(analysis?.result&&(analysis.result.code!==code||analysis.result.period!==period||analysis.result.profile!==analysis.profile))throw Error('实时结构与K线身份不匹配');
+  return {ok:true,code,period,name:panel.name||code,bars,bar_count:bars.length,first:bars[0].date,as_of:bars.at(-1).date,computed_at:panel.computed_at,fetched_at:panel.fetched_at||panel.computed_at,source:panel.provenance?.source||'Railway',adjustment:panel.provenance?.adjustment||'provider_unspecified',volume_unit:panel.provenance?.volume_unit||'source_native',input_sha256:panel.coverage?.input_sha256,forming_bars:bars.filter(b=>!b.is_closed).length,refresh_after_ms:interval(now),analysis,live:true};
  }
  function compatible(snapshot,live){
   if(!snapshot||snapshot.code!==live.code||snapshot.period!==live.period)return false;
@@ -36,7 +39,7 @@
    const c=sync();if(force){next=0;pending=true;}if(!c||!enabled||!visible())return;
    if(busy)return;if(!force&&!pending&&clock()<next)return;
    busy=true;pending=false;const version=generation;requests++;onState?.(state());
-   try{const data=await fetcher(c.code,c.period);sync();if(version!==generation||!enabled)return;onData(data);lastError=null;lastSuccess=clock();next=clock()+interval(clock());}
+   try{const data=await fetcher(c.code,c.period);sync();if(version!==generation||!enabled)return;onData(data);lastError=null;lastSuccess=clock();next=clock()+(data.analysis&&['running','updating','queued'].includes(data.analysis.status)?5000:interval(clock()));}
    catch(error){sync();if(version!==generation)return;lastError=error.message||String(error);next=clock()+Math.max(30000,interval(clock()));}
    finally{busy=false;onState?.(state());if(pending&&enabled&&visible())queueMicrotask(()=>tick());}
   }
