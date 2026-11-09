@@ -40,30 +40,6 @@ jobs:
           path: _pages
       - name: Deploy
         id: deployment
-        uses: actions/github-script@v7
+        uses: actions/deploy-pages@v4
         with:
-          script: |
-            const artifact = (await github.rest.actions.listWorkflowRunArtifacts({owner: context.repo.owner, repo: context.repo.repo, run_id: context.runId})).data.artifacts.find(a => a.name === 'github-pages' && !a.expired);
-            if (!artifact) throw new Error('Pages artifact missing');
-            const oidc = await core.getIDToken();
-            core.setSecret(oidc);
-            const created = await github.request('POST /repos/{owner}/{repo}/pages/deployments', {owner: context.repo.owner, repo: context.repo.repo, artifact_id: artifact.id, pages_build_version: context.sha, oidc_token: oidc});
-            core.setOutput('page_url', created.data.page_url);
-            const deadline = Date.now() + 20 * 60 * 1000;
-            let previous = '', errors = 0;
-            while (Date.now() < deadline) {
-              try {
-                const current = await github.request('GET /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}', {owner: context.repo.owner, repo: context.repo.repo, pages_deployment_id: created.data.id});
-                const state = current.data.status;
-                errors = 0;
-                if (state !== previous) { core.info('Pages state: ' + state); previous = state; }
-                if (state === 'succeed') return;
-                if (['deployment_failed','deployment_perms_error','deployment_content_failed','deployment_cancelled','deployment_lost'].includes(state)) throw new Error('Pages terminal state: ' + state);
-              } catch (error) {
-                if (String(error.message).includes('terminal state') || ++errors >= 10) throw error;
-                core.warning('Temporary Pages status request failed; retrying');
-              }
-              await new Promise(resolve => setTimeout(resolve, 10000));
-            }
-            await github.request('POST /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}/cancel', {owner: context.repo.owner, repo: context.repo.repo, pages_deployment_id: created.data.id});
-            throw new Error('Pages file synchronization exceeded 20 minutes');
+          timeout: 600000
