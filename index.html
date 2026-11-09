@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>量策 LiangCe Web 1.6.0 · 股票研究工作台</title>
-  <link rel="stylesheet" href="tradingview-chart.css?v=e807f74d66bbf4ad">
-  <link rel="stylesheet" href="v2-results.css?v=e807f74d66bbf4ad">
+  <link rel="stylesheet" href="tradingview-chart.css?v=f39c1519e7c48281">
+  <link rel="stylesheet" href="v2-results.css?v=f39c1519e7c48281">
   <style>
     :root {
       color-scheme: light;
@@ -230,7 +230,8 @@
     }
     @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important;transition:none!important; } }
   </style>
-  <link rel="stylesheet" href="responsive.css?v=e807f74d66bbf4ad">
+  <link rel="stylesheet" href="responsive.css?v=f39c1519e7c48281">
+<link rel="stylesheet" href="chan-workbench.css?v=f39c1519e7c48281">
 </head>
 <body>
   <div class="app">
@@ -238,14 +239,13 @@
       <div class="brand"><span class="brand-mark">量</span>量策工作台</div>
       <div class="nav-label">研究工作台</div>
       <nav class="nav" aria-label="主导航">
-        <button class="active" data-screen="market-screen"><span class="glyph">▦</span>市场概况</button>
+        <button class="active" data-screen="market-screen"><span class="glyph">▦</span>缠论全市场</button>
         <button><span class="glyph">▤</span>涨停分布</button>
         <button><span class="glyph">↻</span>板块轮动</button>
         <button><span class="glyph">⌁</span>图表复盘</button>
         <button><span class="glyph">⇄</span>资金流向</button>
         <button><span class="glyph">▱</span>筹码密集</button>
         <div class="nav-label">策略与数据</div>
-        <button data-screen="strategy-screen"><span class="glyph">☷</span>选股策略</button>
         <button data-screen="backtest-screen"><span class="glyph">⌁</span>回测实验</button>
         <button><span class="glyph">▧</span>股票池</button>
       </nav>
@@ -269,7 +269,7 @@
         </section>
         <div class="work-grid">
           <section class="panel">
-            <div class="panel-head"><div class="panel-title-wrap"><h2 class="section-title">全市场股票</h2><span class="section-caption">完整清单与报价 · 点击股票加载历史分析</span></div><button class="text-button">调整策略　→</button></div>
+            <div class="panel-head"><div class="panel-title-wrap"><h2 class="section-title">全市场股票</h2><span class="section-caption">完整清单与报价 · 点击股票加载历史分析</span></div><button class="text-button">回测　→</button></div>
             <div class="filters"><button class="filter-chip selected" data-candidate-filter="all">全部股票</button><button class="filter-chip" data-candidate-filter="analysed">已分析</button><button class="filter-chip" data-candidate-filter="pending">待分析</button><button class="filter-chip" data-candidate-filter="near">接近入场</button><button class="filter-chip" data-candidate-filter="observe">观察</button><select id="candidate-threshold" class="filter-chip" aria-label="评分阈值"><option value="0">全部分数</option><option value="70">评分 ≥ 70</option><option value="80">评分 ≥ 80</option></select><input id="candidate-search" class="search" placeholder="搜索代码 / 名称" aria-label="搜索股票"></div>
             <div class="table-wrap fullmarket-table"><table>
               <thead><tr><th>股票</th><th>评分</th><th>最新价</th><th>涨跌幅</th><th>量比</th><th>入场距离</th><th>信号</th></tr></thead>
@@ -301,12 +301,29 @@
           </div>
         </div>
       </div>
-      <div class="content screen" id="strategy-screen" hidden>
+      <div class="content screen" id="backtest-screen" hidden>
         <div class="page-head">
-          <div><h1>策略参数</h1><div class="subtitle">趋势过滤 → 缠论结构代理 → 入场确认 → 风险退出</div></div>
-          <span class="mode-tag"><span class="tag-dot"></span>proxy_research · 日线代理</span>
+          <div><h1>多区间回测</h1><div class="subtitle">同一策略、相同成本和风控参数，横向比较不同历史区间</div></div>
+          <span class="mode-tag" id="bt-data-source"><span class="tag-dot"></span>等待真实行情数据</span>
         </div>
-        <div class="screen-grid">
+        <section class="panel">
+          <div class="bt-sample-controls" id="bt-sample-controls">
+            <label>回测样本<select id="bt-sample-mode" class="select"><option value="codes">指定股票</option><option value="page">当前市场页股票</option><option value="csv">已导入CSV</option></select></label>
+            <label class="bt-code-field">股票代码<input id="bt-codes" class="search" value="600519" placeholder="600519,000001" aria-label="回测股票代码"></label>
+            <button id="bt-use-selected" class="quiet-button">使用所选股票</button>
+            <span id="bt-sample-note" class="section-caption">自动获取完整历史，不受看图时的云端短历史影响；最多50只</span>
+          </div>
+          <div class="bt-toolbar">
+            <div><div class="section-title" style="margin-bottom:7px">比较区间</div><div class="period-options" role="group" aria-label="回测比较区间">
+              <button class="range-button active" data-period="multi">多区间</button><button class="range-button" data-period="1y">近 1 年</button><button class="range-button" data-period="3y">近 3 年</button><button class="range-button" data-period="5y">近 5 年</button><button class="range-button" data-period="all">全样本</button><button class="range-button" data-period="custom">自定义</button>
+            </div></div>
+            <div class="bt-controls"><div class="range-custom"><label for="bt-start">自定义</label><input id="bt-start" type="date"><span>至</span><input id="bt-end" type="date"></div><label class="quiet-button" for="csv-file" title="支持 date,code,open,high,low,close,volume；可选 name">导入 OHLCV CSV</label><input id="csv-file" type="file" accept=".csv,text/csv" hidden><button class="primary-button" id="run-backtest">运行回测</button><button class="quiet-button" id="cancel-backtest" disabled>取消</button><button class="quiet-button" id="export-trades" title="导出当前区间交易明细 CSV">⇩　导出</button></div>
+          </div>
+          <div class="metric-grid" id="active-metrics"><div class="metric"><label>区间收益</label><b>—</b></div><div class="metric"><label>年化收益</label><b>—</b></div><div class="metric"><label>最大回撤</label><b>—</b></div><div class="metric"><label>胜率 / 笔数</label><b>—</b></div></div>
+          <div class="bt-chart-wrap"><svg id="equity-chart" class="chart-large" viewBox="0 0 1000 230" preserveAspectRatio="none" role="img" aria-label="回测账户权益曲线"></svg></div>
+          <div class="assumption-bar" id="backtest-meta">尚未运行回测。运行后展示成交假设、定义模式和近似损失。</div>
+        </section>
+        <details id="backtest-parameters" class="panel" style="margin:16px 0;padding:14px"><summary style="cursor:pointer;font-weight:600">回测参数与风险试算</summary><div class="screen-grid">
           <div class="stack">
             <section class="panel">
               <div class="panel-head"><div class="panel-title-wrap"><h2 class="section-title">趋势过滤与入场</h2><span class="section-caption">指标只作过滤条件，结构买点由 K 线序列代理判断</span></div></div>
@@ -375,29 +392,7 @@
             </section>
           </div>
         </div>
-      </div>
-      <div class="content screen" id="backtest-screen" hidden>
-        <div class="page-head">
-          <div><h1>多区间回测</h1><div class="subtitle">同一策略、相同成本和风控参数，横向比较不同历史区间</div></div>
-          <span class="mode-tag" id="bt-data-source"><span class="tag-dot"></span>等待真实行情数据</span>
-        </div>
-        <section class="panel">
-          <div class="bt-sample-controls" id="bt-sample-controls">
-            <label>回测样本<select id="bt-sample-mode" class="select"><option value="codes">指定股票</option><option value="page">当前市场页股票</option><option value="csv">已导入CSV</option></select></label>
-            <label class="bt-code-field">股票代码<input id="bt-codes" class="search" value="600519" placeholder="600519,000001" aria-label="回测股票代码"></label>
-            <button id="bt-use-selected" class="quiet-button">使用所选股票</button>
-            <span id="bt-sample-note" class="section-caption">自动获取完整历史，不受看图时的云端短历史影响；最多50只</span>
-          </div>
-          <div class="bt-toolbar">
-            <div><div class="section-title" style="margin-bottom:7px">比较区间</div><div class="period-options" role="group" aria-label="回测比较区间">
-              <button class="range-button active" data-period="multi">多区间</button><button class="range-button" data-period="1y">近 1 年</button><button class="range-button" data-period="3y">近 3 年</button><button class="range-button" data-period="5y">近 5 年</button><button class="range-button" data-period="all">全样本</button><button class="range-button" data-period="custom">自定义</button>
-            </div></div>
-            <div class="bt-controls"><div class="range-custom"><label for="bt-start">自定义</label><input id="bt-start" type="date"><span>至</span><input id="bt-end" type="date"></div><label class="quiet-button" for="csv-file" title="支持 date,code,open,high,low,close,volume；可选 name">导入 OHLCV CSV</label><input id="csv-file" type="file" accept=".csv,text/csv" hidden><button class="primary-button" id="run-backtest">运行回测</button><button class="quiet-button" id="cancel-backtest" disabled>取消</button><button class="quiet-button" id="export-trades" title="导出当前区间交易明细 CSV">⇩　导出</button></div>
-          </div>
-          <div class="metric-grid" id="active-metrics"><div class="metric"><label>区间收益</label><b>—</b></div><div class="metric"><label>年化收益</label><b>—</b></div><div class="metric"><label>最大回撤</label><b>—</b></div><div class="metric"><label>胜率 / 笔数</label><b>—</b></div></div>
-          <div class="bt-chart-wrap"><svg id="equity-chart" class="chart-large" viewBox="0 0 1000 230" preserveAspectRatio="none" role="img" aria-label="回测账户权益曲线"></svg></div>
-          <div class="assumption-bar" id="backtest-meta">尚未运行回测。运行后展示成交假设、定义模式和近似损失。</div>
-        </section>
+</details>
         <div class="screen-grid" style="margin-top:16px">
           <section class="panel">
             <div class="panel-head"><div class="panel-title-wrap"><h2 class="section-title">区间对照</h2><span class="section-caption">各区间独立按初始权益起算；最新一个区间单独绘图</span></div><span class="bt-status" id="bt-status" aria-live="polite">待运行</span></div>
@@ -412,26 +407,27 @@
       </div>
     </main>
   </div>
-  <script>window.LIANGCE_ASSET_VERSION="e807f74d66bbf4ad";</script>
-  <script src="web-config.js?v=e807f74d66bbf4ad"></script>
-  <script src="web-shell.js?v=e807f74d66bbf4ad"></script>
-  <script src="railway-client.js?v=e807f74d66bbf4ad"></script>
-  <script src="web-bridge.js?v=e807f74d66bbf4ad"></script>
-  <script src="strategy.js?v=e807f74d66bbf4ad"></script>
-  <script src="backtest-model.js?v=e807f74d66bbf4ad"></script>
-  <script src="market-table.js?v=e807f74d66bbf4ad"></script>
-  <script src="app.js?v=e807f74d66bbf4ad"></script>
-  <script src="chanlun.js?v=e807f74d66bbf4ad"></script>
-  <script src="signal-review.js?v=e807f74d66bbf4ad"></script>
-  <script src="desktop-ui.js?v=e807f74d66bbf4ad"></script>
-  <script src="vendor/lightweight-charts/dist/lightweight-charts.standalone.production.js?v=e807f74d66bbf4ad"></script>
-  <script src="chart-model.js?v=e807f74d66bbf4ad"></script>
-  <script src="selection-loader.js?v=e807f74d66bbf4ad"></script>
-  <script src="tradingview-chart.js?v=e807f74d66bbf4ad"></script>
-  <script src="analysis-ui.js?v=e807f74d66bbf4ad"></script>
-  <script src="v2-results-ui.js?v=e807f74d66bbf4ad"></script>
-  <script src="railway-live.js?v=e807f74d66bbf4ad"></script>
-  <script src="sectors-ui.js?v=e807f74d66bbf4ad"></script>
+  <script>window.LIANGCE_ASSET_VERSION="f39c1519e7c48281";</script>
+  <script src="web-config.js?v=f39c1519e7c48281"></script>
+  <script src="web-shell.js?v=f39c1519e7c48281"></script>
+  <script src="railway-client.js?v=f39c1519e7c48281"></script>
+  <script src="web-bridge.js?v=f39c1519e7c48281"></script>
+  <script src="strategy.js?v=f39c1519e7c48281"></script>
+  <script src="backtest-model.js?v=f39c1519e7c48281"></script>
+  <script src="market-table.js?v=f39c1519e7c48281"></script>
+  <script src="app.js?v=f39c1519e7c48281"></script>
+  <script src="chanlun.js?v=f39c1519e7c48281"></script>
+  <script src="signal-review.js?v=f39c1519e7c48281"></script>
+  <script src="desktop-ui.js?v=f39c1519e7c48281"></script>
+  <script src="vendor/lightweight-charts/dist/lightweight-charts.standalone.production.js?v=f39c1519e7c48281"></script>
+  <script src="chart-model.js?v=f39c1519e7c48281"></script>
+  <script src="selection-loader.js?v=f39c1519e7c48281"></script>
+  <script src="tradingview-chart.js?v=f39c1519e7c48281"></script>
+  <!-- Indicator scoring pipeline retired: selection uses Chan structures. -->
+  <script src="v2-results-ui.js?v=f39c1519e7c48281"></script>
+  <script src="railway-live.js?v=f39c1519e7c48281"></script>
+  <script src="sectors-ui.js?v=f39c1519e7c48281"></script>
+<script src="chan-workbench.js?v=f39c1519e7c48281"></script>
 </body>
 </html>
 

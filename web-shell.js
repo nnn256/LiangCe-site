@@ -10,7 +10,7 @@
  document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
  sidebar.addEventListener('click',e=>{if(e.target.closest('.nav button'))close();});
  const bottom=document.createElement('nav');bottom.className='web-bottom';bottom.setAttribute('aria-label','快捷导航');
- for(const [label,key] of [['市场','market-screen'],['图表','图表复盘'],['策略','strategy-screen'],['更多','more']]){
+ for(const [label,key] of [['市场','market-screen'],['图表','图表复盘'],['回测','backtest-screen'],['更多','more']]){
   const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=()=>{if(key==='more'){menu.click();return;}const target=Array.from(sidebar.querySelectorAll('.nav button')).find(x=>x.dataset.screen===key||x.textContent.trim().includes(key));target?.click();window.scrollTo({top:0,behavior:'instant'});};bottom.append(b);
  }
  document.body.append(bottom);

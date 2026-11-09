@@ -3,7 +3,7 @@
   const marketTable = window.LiangceMarketTable;
   let universe = [];
   const screens = [...document.querySelectorAll('.screen')];
-  const screenNames = { 'market-screen': '市场概况', 'strategy-screen': '选股策略', 'backtest-screen': '回测实验' };
+  const screenNames = { 'market-screen': '市场概况', 'backtest-screen': '回测实验' };
   const moduleConfigs = {
     '涨停分布': { subtitle: '涨停梯队、连板高度与封单强度', columns: ['梯队', '股票', '涨幅', '连板', '封单额', '状态'], rows: [] },
     '板块轮动': { subtitle: '行业强弱、相对强度与轮动阶段', columns: ['板块', '今日涨幅', '5日强度', '成交额', '阶段', '信号'], rows: [] },
@@ -131,7 +131,7 @@
   }
 
   function validateParams() {
-    const invalid = [...document.querySelectorAll('#strategy-screen [data-param]')].find(input => !input.checkValidity());
+    const invalid = [...document.querySelectorAll('#backtest-parameters [data-param]')].find(input => !input.checkValidity());
     if (invalid) return `${invalid.labels?.[0]?.textContent || invalid.id} 超出允许范围`;
     const params = readParams();
     if (params.maFast >= params.maSlow) return 'MA 快线周期必须小于慢线周期';
@@ -143,31 +143,8 @@
   let selectedCandidate = null;
   function refreshCandidates() {
     const params = readParams(),paramsKey=JSON.stringify(params);
-    candidates = universe.map(symbol => {
-      const cached=analysisCache.get(symbol.code);
-      if(cached?.bars===symbol.bars&&cached.paramsKey===paramsKey)return {...cached.candidate,...symbol};
-      const indicators = engine.buildIndicators(symbol.bars, params);
-      const index = symbol.bars.length - 1;
-      if (index < 61) return null;
-      const bar = symbol.bars[index];
-      const signal = engine.scoreAt(symbol.bars, indicators, index, params);
-      const window = symbol.bars.slice(Math.max(0, index - params.breakoutPeriod), index);
-      const trigger = Math.max(...window.map(item => item.high));
-      const priceCondition = signal.breakout || signal.pullback;
-      const confirmed = signal.trend && signal.macdConfirmed && signal.volumeConfirmed && priceCondition
-        && (!params.requireChan || Boolean(signal.chan));
-      const distance = bar.close / trigger - 1;
-      const status = confirmed ? '代理条件齐备' : Math.abs(distance) <= 0.015 && signal.trend ? '接近触发' : '观察';
-      const candidate={ ...symbol, bar, index, indicators, signal, trigger, distance, status };
-      analysisCache.set(symbol.code,{bars:symbol.bars,paramsKey,candidate});
-      return candidate;
-    }).filter(Boolean).sort((a, b) => b.signal.score - a.signal.score || a.distance - b.distance);
-    const combined=new Map(batchCandidates);
-    candidates.forEach(candidate=>{
-      const compact=combined.get(candidate.code);
-      if(!compact||compact.bar.date<candidate.bar.date||candidate.history_freshness==='cloud_live')combined.set(candidate.code,candidate);
-    });
-    candidates=[...combined.values()];
+    // Stock selection is now driven by the causal Chan workspace.
+    candidates=[];
     renderCandidates();
     if (!selectedCandidate) {
       selectedCandidate = candidates[0]?.code || null;
@@ -342,7 +319,7 @@
       : result.reason;
   }
 
-  document.querySelectorAll('#strategy-screen [data-param],#calc-entry,#calc-low,#calc-atr,#calc-openRisk').forEach(input => {
+  document.querySelectorAll('#backtest-parameters [data-param],#calc-entry,#calc-low,#calc-atr,#calc-openRisk').forEach(input => {
     input.addEventListener('input', updateCalculator);
     input.addEventListener('change', updateCalculator);
   });
@@ -582,7 +559,7 @@
     setScreen('backtest-screen');
     document.querySelector('#run-backtest').click();
   }));
-  document.querySelector('#market-screen .text-button').addEventListener('click', () => setScreen('strategy-screen'));
+  document.querySelector('#market-screen .text-button').addEventListener('click', () => setScreen('backtest-screen'));
   ['bt-start', 'bt-end'].forEach(id => ['change','input'].forEach(event=>document.querySelector('#' + id).addEventListener(event, () => {
     document.querySelectorAll('.range-button').forEach(item => item.classList.toggle('active', item.dataset.period === 'custom'));
   })));

@@ -79,7 +79,7 @@
     $('#chan-code').innerHTML=items.map(item=>`<option value="${item.code}">${esc(item.name)} · ${item.code}</option>`).join('');
     currentCode=items.some(item=>item.code===currentCode)?currentCode:items[0]?.code;
     $('#chan-code').value=currentCode||'';
-    if(!chanScreen.hidden)renderChan();
+    if(!chanScreen.hidden&&!window.LiangceChan)renderChan();
     if(activeModule) renderModule(activeModule);
   }
 

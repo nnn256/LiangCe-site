@@ -52,6 +52,13 @@
   const close=document.createElement('button');close.className='quiet-button';close.textContent='关闭';close.onclick=()=>dialog.close();dialog.append(close);dialog.showModal();return {ok:true};
  }
  const staticAPI={
+  async get_chan_summary(){return json('data/chan-summary.json');},
+  async get_chan_result(code,period='day',force=false){
+   if(!/^\d{6}$/.test(String(code))||!['day','week','month','1m','5m','15m','30m','60m','quarter','year','5d'].includes(period))throw Error('股票或周期无效');
+   if(force)throw Error('网页的全市场缠论结果随发布重算；即时重新计算请在桌面端使用');
+   const response=await fetch(`data/chan/${code}-${period}.json.gz`,{cache:'no-store'});if(!response.ok)throw Error('该股票周期尚无缠论结果');
+   const stream=new Blob([await response.arrayBuffer()]).stream().pipeThrough(new DecompressionStream('gzip'));return new Response(stream).json();
+  },
   async start_background(){await initialize();return {ok:true};},
   async refresh_data(){await initialize(true);reset(params);return {ok:true};},
   async get_state(mv=-1,hv=-1){await initialize();return {version:'1.6.0',phase:'ready',message:`已发布行情 · 截至 ${manifest.market_day}`,market_version:generation,history_version:0,progress:{done:manifest.histories.length,total:market.securities.length,failed:0},...(mv!==generation?{market}:{ }),...(hv!==0?{histories:[]}:{})};},
