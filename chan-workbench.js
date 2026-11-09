@@ -1,6 +1,7 @@
 (() => {
  'use strict';const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const quoteCache=new Map();
+ const quoteStamp=q=>typeof q.market_time==='string'&&/^\d{4}-\d{2}-\d{2}/.test(q.market_time)?q.market_time:typeof q.received_at==='string'?'获取 '+q.received_at:'行情源未提供时间';
  const names={first_buy:'一买',second_buy:'二买',third_buy:'三买',first_sell:'一卖',second_sell:'二卖',third_sell:'三卖'},states={candidate:'待确认',confirmed:'规则确认',invalidated:'已失效',withdrawn:'已撤销'};
  const gateNames={completed_child_types:'中枢子级尚不是已完成走势类型',terminal_is_completed_type:'末段尚未形成完整走势类型',terminal_sublevel_context_present:'缺末段内部低级别中枢',opposite_child_boundary_confirmed:'反向走势边界尚未确认',signal_not_invalidated_at_observation:'识别时边界已失效',first_source_context_passed:'前一类点结构条件未齐',conservative_extreme_held:'回试未守住一类极值',prior_first_context_present:'缺少有效一类点',divergence_center_macd_near_zero:'中枢力度重置条件不足'};
  const periods={day:'日线',week:'周线（聚合）',month:'月线（聚合）','1m':'1分钟（已有任务）','5m':'5分钟（已有任务）','15m':'15分钟（已有任务）','30m':'30分钟（已有任务）','60m':'60分钟（已有任务）'};
@@ -23,7 +24,7 @@
   try{const value=await pywebview.api.get_chan_result(selected,period,force);if(version!==requestVersion)return;if(!value?.ok)throw Error(value?.message||'结果未生成');result=value;draw();backtest();table();}
   catch(e){if(version===requestVersion){$('#cs-chart-title').textContent='读取失败';$('#cs-chart-note').textContent=e.message;}}
  }
- function paintQuotes(){screen.querySelectorAll('[data-cs-quote]').forEach(e=>{const q=quoteCache.get(e.dataset.csQuote);if(q)e.textContent=`${q.stale?'上次报价':'行情'} ¥${q.price.toFixed(2)} · ${q.market_time||q.server_time||'源时间未提供'}`;});const q=quoteCache.get(selected);$('#cs-live-quote').textContent=q?`${q.stale?'上次报价':'行情'} ¥${q.price.toFixed(2)} · ${Number.isFinite(q.change)?q.change.toFixed(2)+'%':'涨幅未提供'} · ${q.market_time||q.server_time||'行情源时间未提供'}；结构价格与确认日期单独显示`:'正在读取所选股票报价；结构使用下方历史K线'; }
+ function paintQuotes(){screen.querySelectorAll('[data-cs-quote]').forEach(e=>{const q=quoteCache.get(e.dataset.csQuote);if(q)e.textContent=`${q.stale?'上次报价':'行情'} ¥${q.price.toFixed(2)} · ${quoteStamp(q)}`;});const q=quoteCache.get(selected);$('#cs-live-quote').textContent=q?`${q.stale?'上次报价':'行情'} ¥${q.price.toFixed(2)} · ${Number.isFinite(q.change)?q.change.toFixed(2)+'%':'涨幅未提供'} · ${quoteStamp(q)}；结构价格与确认日期单独显示`:'正在读取所选股票报价；结构使用下方历史K线'; }
  function clearChart(){if(chart){candles.setData([]);markers.setMarkers([]);for(const l of lines)chart.removeSeries(l);lines=[];}$('#cs-events').innerHTML='';$('#cs-evidence').textContent='等待读取';}
  function draw(){if(!result||$('#cs-chart-section').hidden)return;if(!chart){chart=LightweightCharts.createChart($('#cs-chart'),{autoSize:true,layout:{background:{color:'#fff'},textColor:'#58645f'},timeScale:{timeVisible:false},grid:{vertLines:{color:'#edf0ed'},horzLines:{color:'#edf0ed'}}});candles=chart.addSeries(LightweightCharts.CandlestickSeries,{upColor:'#c74b4b',downColor:'#087b68',wickUpColor:'#c74b4b',wickDownColor:'#087b68',borderVisible:false});markers=LightweightCharts.createSeriesMarkers(candles,[]);}
   clearChart();candles.setData(result.bars.map(b=>({...b,time:chartTime(b.date)})));const bars=result.bars;
