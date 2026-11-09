@@ -3,6 +3,7 @@
  const labels={first_buy:'一买',second_buy:'二买',third_buy:'三买',first_sell:'一卖',second_sell:'二卖',third_sell:'三卖'};
  const states={candidate:'待确认',confirmed:'确认',invalidated:'失效',withdrawn:'撤销'};
  function time(value,period){const label=String(value).replace('T',' ');return period.endsWith('m')?Math.floor(Date.parse(label.slice(0,16).replace(' ','T')+':00+08:00')/1000):label.slice(0,10);}
+ function tickTime(value,type){if(typeof value!=='number')return String(value);const cn=new Date(value*1000+8*3600000).toISOString();return type>=3?cn.slice(11,type===4?19:16):type===0?cn.slice(0,4):cn.slice(5,10);}
  function build(result,{mode='anchor',fractals=true,signals=true,rank='all'}={}){
   const bars=result?.bars||[],markers=[],evidence={};let omitted=0;
   const times=new Set(bars.map(b=>time(b.date,result.period)));
@@ -23,5 +24,5 @@
   markers.sort((a,b)=>(typeof a.time==='number'?a.time-b.time:a.time.localeCompare(b.time))||a.id.localeCompare(b.id));
   return {markers,evidence,omitted,signalCount:markers.filter(m=>m.id.startsWith('signal:')).length,fractalCount:markers.filter(m=>m.id.startsWith('fractal:')).length};
  }
- return {build,time};
+ return {build,time,tickTime};
 });
