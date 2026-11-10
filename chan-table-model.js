@@ -10,6 +10,7 @@
  function day(value){return typeof value==='string'?value.slice(0,10):null;}
  function days(from,to){const a=Date.parse(day(from)),b=Date.parse(day(to));return Number.isFinite(a)&&Number.isFinite(b)?Math.max(0,Math.floor((b-a)/86400000)):null;}
  function basis(p){return basisNames[p?.adjustment]||p?.adjustment||'口径未记录';}
+ function choosePeriod(saved,live){return live&&(!saved?.as_of||String(live.as_of)>=String(saved.as_of))?live:saved;}
  function describe(p,s){
   const count=Object.values(p?.counts||{}).reduce((a,b)=>a+(Number(b)||0),0);
   if(!s)return {empty:p?.error?'该周期数据不足':count?'本筛选无匹配记录':'本样本无六类记录',count,scope:p?.scope||'saved_sample',basis:basis(p)};
@@ -33,5 +34,5 @@
   return {bar_count:result.bar_count,first:result.first,as_of:result.as_of,adjustment:result.adjustment,source:result.source,scope:'full_live_replay',counts:result.counts,states:result.states,
    latest:list.length?brief(list.at(-1)):null,latest_by_state:byState,latest_by_class:byClass,latest_by_class_state:both,certificate_errors:result.certificate_errors};
  }
- return {signal,describe,quoteBoundary,compact,stamp,days,basis};
+ return {signal,describe,quoteBoundary,compact,stamp,days,basis,choosePeriod};
 });

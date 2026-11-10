@@ -53,7 +53,7 @@
  }
  function tab(name){$('#cs-market').hidden=name!=='market';$('#cs-chart-section').hidden=name!=='chart';$('#cs-backtest').hidden=name!=='backtest';screen.querySelectorAll('[data-cs-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.csTab===name)));if(name==='chart'){requestAnimationFrame(()=>draw());window.dispatchEvent(new Event('liangce:chan-selected'));}if(name==='backtest')backtest();}
  function show(name='market'){document.querySelectorAll('.screen').forEach(s=>s.hidden=s!==screen);$('.crumb b').textContent='缠论选股与复测';tab(name);if(!summary)loadSummary();}
- function rowPeriod(row){return liveRows.get(row.code+':'+period)||row.periods[period];}
+ function rowPeriod(row){return tableModel.choosePeriod(row.periods[period],liveRows.get(row.code+':'+period));}
  function rowSignal(p,cls,state){return tableModel.signal(p,cls,state);}
  function table(){if(!summary)return;period=$('#cs-period').value;const q=$('#cs-search').value.trim(),cls=$('#cs-class').value,state=$('#cs-state').value;
   rows=summary.rows.filter(r=>{const p=rowPeriod(r);if(!p)return false;const s=rowSignal(p,cls,state);if(q&&!`${r.code} ${r.name}`.includes(q))return false;if(cls!=='all'&&!(p?.counts?.[cls]>0))return false;if(state==='history')return Object.values(p?.counts||{}).some(x=>x>0);return state==='all'||s?.state===state;});
