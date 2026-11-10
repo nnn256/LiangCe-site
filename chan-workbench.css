@@ -9,3 +9,5 @@
 .cs-marker-tools input[type=checkbox],.cs-live-controls input[type=checkbox]{width:14px!important;height:14px!important;min-width:14px!important;appearance:auto!important;accent-color:var(--teal)}
 
 .cs-table-explainer{border-bottom:1px solid var(--line);background:#fafbf9}.cs-delay,.cs-boundary-check{font-size:11px;line-height:1.6;color:var(--amber);white-space:normal}.chan-list .stock-code{max-width:240px;white-space:normal;line-height:1.6}.chan-list table{min-width:1150px}
+
+.cs-row-actions{display:flex;gap:5px;margin:5px 0}.cs-row-actions .quiet-button{font-size:11px;min-height:30px;padding:4px 7px}#cs-analysis-status{flex-basis:100%;line-height:1.7;color:var(--muted)}

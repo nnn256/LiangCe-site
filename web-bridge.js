@@ -53,6 +53,14 @@
   const close=document.createElement('button');close.className='quiet-button';close.textContent='关闭';close.onclick=()=>dialog.close();dialog.append(close);dialog.showModal();return {ok:true};
  }
  const staticAPI={
+  async get_live_candles(code,period='day'){
+   window.LiangceChanLiveModel.validate(String(code),period);const symbol=LiangceRailway.symbol(code);
+   return liveRequest('/api/market/candles/'+symbol+'?period='+period+'&count=1200&include_forming=true');
+  },
+  async get_live_structure(code,period='day',force=false){
+   window.LiangceChanLiveModel.validate(String(code),period);const symbol=LiangceRailway.symbol(code);
+   return liveRequest('/api/workbench/analysis/'+symbol+'/'+period+'?start=true'+(force?'&refresh=true':''));
+  },
   async get_live_panel(code,period='day'){
    window.LiangceChanLiveModel.validate(String(code),period);
    if(!config.live_api)throw Error('尚未配置实时行情后台');
@@ -98,6 +106,13 @@
   async get_sectors(){return json('data/sectors.json');},
   async list_v2_jobs(){return {ok:true,sources:[],jobs:[],source_id:null,message:'已发布网页未包含本机V2任务；请使用完整网页服务读取任务库'};}
  };
+ async function liveRequest(path){
+  if(!config.live_api)throw Error('尚未配置实时行情后台');
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),65000);
+  try{const response=await fetch(new URL(path,config.live_api),{cache:'no-store',credentials:'omit',signal:controller.signal});let value;try{value=await response.json();}catch{throw Error('行情服务响应异常，请重试');}
+   if(!response.ok)return {ok:false,status:response.status,retry_after:Number(response.headers?.get('Retry-After'))||10,message:typeof value.detail==='string'?value.detail:'实时服务暂不可用'};return value;
+  }finally{clearTimeout(timer);}
+ }
  async function rpc(name,args){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
   try{const response=await fetch('api/'+name,{method:'POST',headers:{'Content-Type':'application/json','X-LiangCe-Web':'1'},body:JSON.stringify(args),signal:controller.signal});const value=await response.json();if(!response.ok)throw Error(value.message||'服务暂不可用');announce('通达信在线服务 · 报价自动刷新 · K线日期以各股票实际返回为准');return value;}

@@ -6,7 +6,7 @@
  function interval(now=Date.now()){return trading(now)?20000:300000;}
  function normalize(panel,code,period,now=Date.now()){
   validate(code,period);const full=(code.startsWith('6')?'sh':/^(4|8|92)/.test(code)?'bj':'sz')+code;
-  if(panel.symbol!==full||panel.period!==period||panel.source_kind!=='live_market_panel')throw Error('后台未返回对应股票和周期的实时数据');
+  if(panel.symbol!==full||panel.period!==period||!['live_market_panel','live_candles'].includes(panel.source_kind))throw Error('后台未返回对应股票和周期的实时数据');
   const computed=Date.parse(panel.computed_at||'');if(!Number.isFinite(computed)||computed>now+60000||now-computed>Math.max(interval(now)*2,180000))throw Error('后台返回的实时快照已过期');
   const unique=new Map();
   for(const b of panel.bars||[]){
@@ -31,19 +31,26 @@
   for(const old of snapshot.bars||[]){const b=byDate.get(old.date);if(!b)continue;matched++;if(['open','high','low','close'].some(k=>Math.abs(b[k]-old[k])>1e-7))return false;}
   return matched>0&&matched===snapshot.bars.length;
  }
- function scheduler({fetcher,context,onData,onState,clock=()=>Date.now(),visible=()=>true}){
-  let key='',generation=0,busy=false,next=0,enabled=true,lastError=null,lastSuccess=null,requests=0,pending=false;
-  function sync(){const c=context(),nextKey=c?c.code+':'+c.period:'';if(nextKey!==key){key=nextKey;generation++;next=0;lastSuccess=null;lastError=null;pending=Boolean(key);onState?.(state());}return c;}
+ function mergeHistory(previous,current){
+  const basis=x=>x==='unadjusted'?'none':x;
+  if(!previous||previous.code!==current.code||previous.period!==current.period||basis(previous.adjustment)!==basis(current.adjustment)||!previous.volume_unit||previous.volume_unit!==current.volume_unit)return current;
+  if(!previous.bars?.some(b=>b.date===current.bars[0]?.date))return current;
+  const rows=new Map(previous.bars.map(b=>[b.date,b]));for(const b of current.bars)rows.set(b.date,b);
+  const bars=[...rows.values()].sort((a,b)=>a.date.localeCompare(b.date));return {...current,bars,bar_count:bars.length,first:bars[0].date,as_of:bars.at(-1).date,analysis:current.analysis||previous.analysis};
+ }
+ function scheduler({fetcher,context,onData,onState,clock=()=>Date.now(),visible=()=>true,delay=null}){
+  let key='',generation=0,busy=false,next=0,enabled=true,lastError=null,lastSuccess=null,requests=0,pending=false,failures=0;
+  function sync(){const c=context(),nextKey=c?c.code+':'+c.period:'';if(nextKey!==key){key=nextKey;generation++;next=0;lastSuccess=null;lastError=null;failures=0;pending=Boolean(key);onState?.(state());}return c;}
   function state(){return {key,busy,next,enabled,lastError,lastSuccess,requests};}
   async function tick(force=false){
    const c=sync();if(force){next=0;pending=true;}if(!c||!enabled||!visible())return;
    if(busy)return;if(!force&&!pending&&clock()<next)return;
    busy=true;pending=false;const version=generation;requests++;onState?.(state());
-   try{const data=await fetcher(c.code,c.period);sync();if(version!==generation||!enabled)return;onData(data);lastError=null;lastSuccess=clock();next=clock()+(data.analysis&&['running','updating','queued'].includes(data.analysis.status)?5000:interval(clock()));}
-   catch(error){sync();if(version!==generation)return;lastError=error.message||String(error);next=clock()+Math.max(30000,interval(clock()));}
+   try{const data=await fetcher(c.code,c.period);sync();if(version!==generation||!enabled)return;onData(data);lastError=null;failures=0;lastSuccess=clock();next=clock()+(delay?delay(data):data.analysis&&['running','updating','queued'].includes(data.analysis.status)?5000:interval(clock()));}
+   catch(error){sync();if(version!==generation)return;lastError=error.message||String(error);failures++;next=clock()+(Number.isFinite(error.retryAfter)?Math.max(2000,Math.min(60000,error.retryAfter*1000)):Math.min(30000,5000*2**Math.min(3,failures-1)));}
    finally{busy=false;onState?.(state());if(pending&&enabled&&visible())queueMicrotask(()=>tick());}
   }
   return {tick,state,setEnabled(value){enabled=Boolean(value);generation++;next=0;pending=enabled;onState?.(state());if(enabled)tick(true);}};
  }
- return {normalize,compatible,scheduler,interval,trading,validate};
+ return {normalize,compatible,scheduler,interval,trading,validate,mergeHistory};
 });
