@@ -61,6 +61,7 @@
    window.LiangceChanLiveModel.validate(String(code),period);const symbol=LiangceRailway.symbol(code);
    return liveRequest('/api/workbench/analysis/'+symbol+'/'+period+'?start=true'+(force?'&refresh=true':''));
   },
+  async get_market_overview(refresh=false){return liveRequest('/api/workbench/market-overview'+(refresh?'?refresh=true':''));},
   async get_live_panel(code,period='day'){
    window.LiangceChanLiveModel.validate(String(code),period);
    if(!config.live_api)throw Error('尚未配置实时行情后台');
@@ -68,6 +69,7 @@
    try{const response=await fetch(new URL('/api/workbench/panel/'+symbol+'/'+period,config.live_api),{cache:'no-store',credentials:'omit',signal:controller.signal});const value=await response.json();if(!response.ok)throw Error(typeof value.detail==='string'?value.detail:'实时K线服务暂不可用');return value;}finally{clearTimeout(timer);}
   },
   async get_chan_summary(){return json('data/chan-summary.json');},
+  async get_saved_chan_result(code,period='day'){return staticAPI.get_chan_result(code,period,false);},
   async get_chan_result(code,period='day',force=false){
    if(!/^\d{6}$/.test(String(code))||!['day','week','month','1m','5m','15m','30m','60m','quarter','year','5d'].includes(period))throw Error('股票或周期无效');
    if(force)throw Error('网页的全市场缠论结果随发布重算；即时重新计算请在桌面端使用');
@@ -121,6 +123,7 @@
  }
  window.pywebview={api:new Proxy({}, {get:(_,name)=>{
   if(name==='save_chart_export')return async(...args)=>save(...args);
+  if(name==='get_market_overview')return async(...args)=>snapshotMode?liveRequest('/api/workbench/market-overview'+(args[0]?'?refresh=true':'')):rpc(name,args);
   if(name==='open_chart_exports')return async()=>openExports();
   if(snapshotMode)return async(...args)=>{if(!staticAPI[name])throw Error('此功能需要完整网页服务');return staticAPI[name](...args);};
   return (...args)=>rpc(name,args);

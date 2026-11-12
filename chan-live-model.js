@@ -36,7 +36,7 @@
   if(!previous||previous.code!==current.code||previous.period!==current.period||basis(previous.adjustment)!==basis(current.adjustment)||!previous.volume_unit||previous.volume_unit!==current.volume_unit)return current;
   if(!previous.bars?.some(b=>b.date===current.bars[0]?.date))return current;
   const rows=new Map(previous.bars.map(b=>[b.date,b]));for(const b of current.bars)rows.set(b.date,b);
-  const bars=[...rows.values()].sort((a,b)=>a.date.localeCompare(b.date));return {...current,bars,bar_count:bars.length,first:bars[0].date,as_of:bars.at(-1).date,analysis:current.analysis||previous.analysis};
+  let bars=[...rows.values()].sort((a,b)=>a.date.localeCompare(b.date));if(bars.length>30000)bars=bars.slice(-30000);return {...current,bars,bar_count:bars.length,first:bars[0].date,as_of:bars.at(-1).date,analysis:current.analysis||previous.analysis};
  }
  function scheduler({fetcher,context,onData,onState,clock=()=>Date.now(),visible=()=>true,delay=null}){
   let key='',generation=0,busy=false,next=0,enabled=true,lastError=null,lastSuccess=null,requests=0,pending=false,failures=0;

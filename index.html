@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>量策 LiangCe Web 1.6.9 · 股票研究工作台</title>
-  <link rel="stylesheet" href="tradingview-chart.css?v=b30d3d3902a4e80f">
-  <link rel="stylesheet" href="v2-results.css?v=b30d3d3902a4e80f">
+  <title>量策 LiangCe 1.7.1 · 股票研究工作台</title>
+  <link rel="stylesheet" href="tradingview-chart.css?v=f8647da16c4f5809">
+  <link rel="stylesheet" href="v2-results.css?v=f8647da16c4f5809">
+  <link rel="stylesheet" href="responsive.css?v=f8647da16c4f5809">
   <style>
     :root {
       color-scheme: light;
@@ -230,8 +231,8 @@
     }
     @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important;transition:none!important; } }
   </style>
-  <link rel="stylesheet" href="responsive.css?v=b30d3d3902a4e80f">
-<link rel="stylesheet" href="chan-workbench.css?v=b30d3d3902a4e80f">
+  <link rel="stylesheet" href="desktop-updates.css?v=f8647da16c4f5809">
+<link rel="stylesheet" href="chan-workbench.css?v=f8647da16c4f5809">
 </head>
 <body>
   <div class="app">
@@ -249,12 +250,12 @@
         <button data-screen="backtest-screen"><span class="glyph">⌁</span>回测实验</button>
         <button><span class="glyph">▧</span>股票池</button>
       </nav>
-      <div class="side-bottom"><span class="live-dot"></span>LiangCe Web 1.6.9 · 自动采集</div>
+      <div class="side-bottom"><span class="live-dot"></span>LiangCe 1.7.1 · 自动采集</div>
     </aside>
     <main>
       <header class="topbar">
         <div class="crumb">工作台　/　<b>市场概况</b></div>
-        <div class="top-right"><span id="top-data-status" class="date">等待数据连接</span><span class="demo-label">LiangCe Web 1.6.9</span></div>
+        <div class="top-right"><span id="top-data-status" class="date">等待数据连接</span><span class="demo-label">LiangCe 1.7.1</span></div>
       </header>
       <div class="content screen" id="market-screen">
         <div class="page-head">
@@ -311,7 +312,7 @@
             <label>回测样本<select id="bt-sample-mode" class="select"><option value="codes">指定股票</option><option value="page">当前市场页股票</option><option value="csv">已导入CSV</option></select></label>
             <label class="bt-code-field">股票代码<input id="bt-codes" class="search" value="600519" placeholder="600519,000001" aria-label="回测股票代码"></label>
             <button id="bt-use-selected" class="quiet-button">使用所选股票</button>
-            <span id="bt-sample-note" class="section-caption">自动获取完整历史，不受看图时的云端短历史影响；最多50只</span>
+            <span id="bt-sample-note" class="section-caption">自动核验通达信完整历史；回测样本独立保存，最多50只</span>
           </div>
           <div class="bt-toolbar">
             <div><div class="section-title" style="margin-bottom:7px">比较区间</div><div class="period-options" role="group" aria-label="回测比较区间">
@@ -407,34 +408,36 @@
       </div>
     </main>
   </div>
-  <script>window.LIANGCE_ASSET_VERSION="b30d3d3902a4e80f";</script>
-  <script src="web-config.js?v=b30d3d3902a4e80f"></script>
-  <script src="web-shell.js?v=b30d3d3902a4e80f"></script>
-  <script src="railway-client.js?v=b30d3d3902a4e80f"></script>
-  <script src="web-bridge.js?v=b30d3d3902a4e80f"></script>
-  <script src="strategy.js?v=b30d3d3902a4e80f"></script>
-  <script src="backtest-model.js?v=b30d3d3902a4e80f"></script>
-  <script src="market-table.js?v=b30d3d3902a4e80f"></script>
-  <script src="app.js?v=b30d3d3902a4e80f"></script>
-  <script src="chanlun.js?v=b30d3d3902a4e80f"></script>
-  <script src="signal-review.js?v=b30d3d3902a4e80f"></script>
-  <script src="desktop-ui.js?v=b30d3d3902a4e80f"></script>
-  <script src="vendor/lightweight-charts/dist/lightweight-charts.standalone.production.js?v=b30d3d3902a4e80f"></script>
-  <script src="chart-model.js?v=b30d3d3902a4e80f"></script>
-  <script src="selection-loader.js?v=b30d3d3902a4e80f"></script>
-  <script src="tradingview-chart.js?v=b30d3d3902a4e80f"></script>
+  <script>window.LIANGCE_ASSET_VERSION="f8647da16c4f5809";</script>
+  <script src="railway-client.js?v=f8647da16c4f5809"></script>
+  <script src="web-config.js?v=f8647da16c4f5809"></script>
+  <script src="web-bridge.js?v=f8647da16c4f5809"></script>
+  <script src="web-shell.js?v=f8647da16c4f5809"></script>
+  <script src="strategy.js?v=f8647da16c4f5809"></script>
+  <script src="backtest-model.js?v=f8647da16c4f5809"></script>
+  <script src="market-table.js?v=f8647da16c4f5809"></script>
+  <script src="app.js?v=f8647da16c4f5809"></script>
+  <script src="chanlun.js?v=f8647da16c4f5809"></script>
+  <script src="signal-review.js?v=f8647da16c4f5809"></script>
+  <script src="desktop-ui.js?v=f8647da16c4f5809"></script>
+  <script src="vendor/lightweight-charts/dist/lightweight-charts.standalone.production.js?v=f8647da16c4f5809"></script>
+  <script src="chart-model.js?v=f8647da16c4f5809"></script>
+  <script src="selection-loader.js?v=f8647da16c4f5809"></script>
+  <script src="tradingview-chart.js?v=f8647da16c4f5809"></script>
   <!-- Indicator scoring pipeline retired: selection uses Chan structures. -->
-  <script src="v2-results-ui.js?v=b30d3d3902a4e80f"></script>
-  <script src="railway-live.js?v=b30d3d3902a4e80f"></script>
-  <script src="sectors-ui.js?v=b30d3d3902a4e80f"></script>
-<script src="chan-levels.js?v=b30d3d3902a4e80f"></script>
-<script src="chip-profile.js?v=b30d3d3902a4e80f"></script>
-<script src="chip-view.js?v=b30d3d3902a4e80f"></script>
-<script src="chan-live-model.js?v=b30d3d3902a4e80f"></script>
-<script src="chan-markers.js?v=b30d3d3902a4e80f"></script>
-<script src="chan-table-model.js?v=b30d3d3902a4e80f"></script>
-<script src="chan-workbench.js?v=b30d3d3902a4e80f"></script>
-<script src="chan-live.js?v=b30d3d3902a4e80f"></script>
+  <script src="v2-results-ui.js?v=f8647da16c4f5809"></script>
+  <script src="sectors-ui.js?v=f8647da16c4f5809"></script>
+<script src="chan-levels.js?v=f8647da16c4f5809"></script>
+<script src="chip-profile.js?v=f8647da16c4f5809"></script>
+<script src="chip-view.js?v=f8647da16c4f5809"></script>
+<script src="chan-live-model.js?v=f8647da16c4f5809"></script>
+<script src="chan-markers.js?v=f8647da16c4f5809"></script>
+<script src="chan-table-model.js?v=f8647da16c4f5809"></script>
+<script src="chan-workbench.js?v=f8647da16c4f5809"></script>
+<script src="chan-live.js?v=f8647da16c4f5809"></script>
+<script src="market-overview.js?v=f8647da16c4f5809"></script>
+<script src="railway-live.js?v=f8647da16c4f5809"></script>
 </body>
 </html>
+
 
