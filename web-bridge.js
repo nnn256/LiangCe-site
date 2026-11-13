@@ -62,6 +62,8 @@
    return liveRequest('/api/workbench/analysis/'+symbol+'/'+period+'?start=true'+(force?'&refresh=true':''));
   },
   async get_market_overview(refresh=false){return liveRequest('/api/workbench/market-overview'+(refresh?'?refresh=true':''));},
+  async get_environment_history(refresh=false){return liveRequest('/api/workbench/environment-history'+(refresh?'?refresh=true':''));},
+  async get_environment_kline(kind,code){if(!['index','sector'].includes(kind))throw Error('环境K线类型无效');return liveRequest('/api/workbench/environment-history/'+kind+'/'+encodeURIComponent(String(code)));},
   async get_live_panel(code,period='day'){
    window.LiangceChanLiveModel.validate(String(code),period);
    if(!config.live_api)throw Error('尚未配置实时行情后台');
