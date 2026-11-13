@@ -2,6 +2,7 @@
  'use strict';
  const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  let root,summary=null,busy=false,timer=null,historyState=null,selectedSeries=null,seriesData=null,historyChart=null;
+ let overviewRequest=0,historyRequest=0,seriesRequest=0,seriesBusy=0;
  function init(){
   const screen=$('#chan-selection-screen');if(!screen||root)return;
   root=document.createElement('section');root.id='cs-market-context';root.className='panel cs-market-context';root.hidden=true;
@@ -9,36 +10,71 @@
   const tools=document.createElement('div');tools.className='env-history-tools';tools.innerHTML='<label>环境历史K线<select id="cs-env-series" class="select" aria-label="指数或行业"></select></label><button id="cs-env-load" class="quiet-button" disabled>读取完整K线</button><button id="cs-env-download" class="quiet-button" disabled>导出完整CSV</button><button id="cs-env-refresh" class="quiet-button">重建环境历史</button><span id="cs-env-series-status" role="status">等待历史环境数据</span>';
   const result=document.createElement('div');result.id='cs-env-series-result';result.className='env-history-result';root.append(tools,result);
   screen.append(root);$('#cs-overview-range').onchange=render;$('#cs-overview-refresh').onclick=()=>load(true);
-  $('#cs-env-series').onchange=()=>{selectedSeries=$('#cs-env-series').value;seriesData=null;clearHistoryChart();$('#cs-env-download').disabled=true;$('#cs-env-series-result').replaceChildren();$('#cs-env-series-status').textContent=selectedSeries?'已切换序列，请读取历史K线':'当前没有可用历史序列';};$('#cs-env-load').onclick=loadSeries;$('#cs-env-download').onclick=downloadSeries;$('#cs-env-refresh').onclick=()=>pollHistory(true);
+  $('#cs-env-series').onchange=()=>{selectedSeries=$('#cs-env-series').value;resetSeries(selectedSeries?'已切换序列，请读取历史K线':'当前没有可用历史序列');};
+  $('#cs-env-load').onclick=loadSeries;$('#cs-env-download').onclick=downloadSeries;$('#cs-env-refresh').onclick=()=>pollHistory(true);
   const labels=[...document.querySelectorAll('.nav button')];labels.filter(b=>/板块轮动|资金流向/.test(b.textContent)).forEach(b=>b.addEventListener('click',e=>{e.preventDefault();show();load();}));
  }
  function show(){init();if(!root)return;document.querySelectorAll('.screen').forEach(s=>s.hidden=s!==root.closest('#chan-selection-screen'));const host=root.closest('#chan-selection-screen');host.hidden=false;host.querySelector('#cs-market').hidden=true;host.querySelector('#cs-chart-section').hidden=true;host.querySelector('#cs-backtest').hidden=true;root.hidden=false;const crumb=document.querySelector('.crumb b');if(crumb)crumb.textContent='大盘与行业环境';}
- function render(){if(!summary)return;const indices=summary.indices||[],h=summary.environment_history||{};historyState=h;$('#cs-overview-time').textContent=`${summary.as_of||'—'} · ${summary.sources?.indices||'指数源未记录'}`;const sectorError=(h.errors||[]).find(item=>item.kind==='sector')?.error||(h.errors||[]).find(item=>item.kind==='sector_catalog')?.error||'';$('#cs-env-history').textContent=h.status==='ready'?`环境历史门控已就绪 · 指数 ${h.indices_available||h.indices_done||0}/${h.indices_total||0} · 行业 ${h.sectors_available||0}/${h.sectors_total||0} · 覆盖 ${(100*(h.coverage||0)).toFixed(1)}% · ${h.first||'—'} 至 ${h.as_of||'—'} · 信号按可用时点对齐`:`全历史环境K线：${h.status==='loading'?`采集计算中 · 指数 ${h.indices_done||0}/${h.indices_total||0} · 行业 ${h.sectors_done||0}/${h.sectors_total||0} · 已获取 ${h.sectors_available||0} · 失败 ${h.sectors_failed||0}`:h.status==='partial'?`环境历史不完整，买点暂不确认 · 指数 ${h.indices_available||0}/${h.indices_total||0} · 行业 ${h.sectors_available||0}/${h.sectors_total||0} · ${h.sectors_total?'已采集序列仍可读取/导出':'行业目录不可用'} · ${sectorError||h.error||''}`:h.status==='disabled'?'当前服务未启用环境历史采集':`尚未就绪：${h.error||'等待历史行情源'}`}`;renderSeriesOptions(h);$('#cs-index-cards').innerHTML=indices.length?indices.slice(0,5).map(x=>`<div class="cs-index-card"><div class="stock-code">${esc(x.symbol)}</div><b>${esc(x.name||x.symbol)}</b><strong>${Number(x.price||0).toFixed(2)}</strong><span class="${Number(x.changePercent)>=0?'up':'down'}">${Number(x.changePercent)>=0?'+':''}${Number(x.changePercent||0).toFixed(2)}%</span><small>成交额 ${Number(x.amount||0).toFixed(1)}亿</small></div>`).join(''):'<div class="empty-state">指数行情暂不可用</div>';
+ function active(){const host=root?.closest('#chan-selection-screen');return Boolean(root&&!root.hidden&&host&&!host.hidden&&document.visibilityState!=='hidden');}
+ function render(){if(!summary)return;const indices=summary.indices||[],h=historyState||summary.environment_history||{};$('#cs-overview-time').textContent=`${summary.as_of||'—'} · ${summary.sources?.indices||'指数源未记录'}`;renderHistory(h);$('#cs-index-cards').innerHTML=indices.length?indices.slice(0,5).map(x=>`<div class="cs-index-card"><div class="stock-code">${esc(x.symbol)}</div><b>${esc(x.name||x.symbol)}</b><strong>${Number(x.price||0).toFixed(2)}</strong><span class="${Number(x.changePercent)>=0?'up':'down'}">${Number(x.changePercent)>=0?'+':''}${Number(x.changePercent||0).toFixed(2)}%</span><small>成交额 ${Number(x.amount||0).toFixed(1)}亿</small></div>`).join(''):'<div class="empty-state">指数行情暂不可用</div>';
   const range=$('#cs-overview-range').value,d=summary.sectors?.[range]||{},items=[...(d.inflow||[]).map(x=>({...x,dir:'流入'})),...(d.outflow||[]).map(x=>({...x,dir:'流出'}))];$('#cs-sector-flow').innerHTML=`<div class="cs-sector-head"><b>${range==='day'?'当日':'近5日'}行业资金</b><span>${esc(d.source||'来源未记录')}${d.estimated?' · 估算':''}</span></div><div class="cs-sector-list">${items.length?items.map(x=>`<div class="cs-sector-row"><b>${esc(x.name)}</b><span class="${x.dir==='流入'?'up':'down'}">${x.dir} ${Number(x.flow||0).toFixed(1)}亿</span><span>${Number(x.pct||0)>=0?'+':''}${Number(x.pct||0).toFixed(2)}%</span></div>`).join(''):'<div class="empty-state">暂无行业资金数据</div>'}</div>`;const rule=h.environment_rules||{};$('#cs-overview-note').textContent=`${summary.definition||'指数快照与当日/5日主力流向用于展示；判定使用对应历史日K。'} ${rule.buy||''} ${rule.sell||''} ${summary.estimated?.[range]?`；当前${range==='day'?'当日':'近5日'}资金为估算值，不进入全历史门控`:''}`;
  }
- function renderSeriesOptions(state){const select=$('#cs-env-series');if(!select)return;const indexCodes=new Set(state.available_indices||[]),sectorCodes=new Set(state.available_sector_codes||[]);const options=[...(state.indices||[]).filter(code=>indexCodes.has(code)).map(code=>({value:'index|'+code,label:'指数 · '+code})),...(state.sector_catalog||[]).filter(item=>sectorCodes.has(item.code)).map(item=>({value:'sector|'+item.code,label:'行业 · '+item.name+' '+item.code}))];const old=selectedSeries||select.value||options[0]?.value||'';select.replaceChildren();for(const item of options){const option=document.createElement('option');option.value=item.value;option.textContent=item.label;select.append(option);}if(options.some(item=>item.value===old))select.value=old;selectedSeries=select.value||null;$('#cs-env-load').disabled=!selectedSeries;}
- async function pollHistory(refresh=false){try{historyState=await window.pywebview.api.get_environment_history(refresh);if(summary){summary.environment_history=historyState;render();}}catch(error){const status=$('#cs-env-series-status');if(status)status.textContent='环境历史状态读取失败：'+error.message;}}
+ function renderHistory(state){
+  if(!state)return;historyState=state;
+  const sectorError=(state.errors||[]).find(item=>item.kind==='sector')?.error||(state.errors||[]).find(item=>item.kind==='sector_catalog')?.error||'';
+  const hasAvailableSeries=(state.available_indices||[]).length+(state.available_sector_codes||[]).length>0;
+  $('#cs-env-history').textContent=state.status==='ready'?`环境历史门控已就绪 · 指数 ${state.indices_available||state.indices_done||0}/${state.indices_total||0} · 行业 ${state.sectors_available||0}/${state.sectors_total||0} · 覆盖 ${(100*(state.coverage||0)).toFixed(1)}% · ${state.first||'—'} 至 ${state.as_of||'—'} · 信号按可用时点对齐`:state.status==='loading'?`采集计算中 · 指数 ${state.indices_done||0}/${state.indices_total||0} · 行业 ${state.sectors_done||0}/${state.sectors_total||0} · 已获取 ${state.sectors_available||0} · 失败 ${state.sectors_failed||0}`:state.status==='partial'?`环境历史不完整，买点暂不确认 · 指数 ${state.indices_available||0}/${state.indices_total||0} · 行业 ${state.sectors_available||0}/${state.sectors_total||0} · ${state.sectors_total?'行业历史未采齐': '行业目录不可用'} · ${hasAvailableSeries?'已采集序列可读取/导出':'暂无可读历史序列'} · ${sectorError||state.error||''}`:state.status==='disabled'?'当前服务未启用环境历史采集':`尚未就绪：${state.error||'等待历史行情源'}`;
+  renderSeriesOptions(state);
+ }
+ function renderSeriesOptions(state){
+  const select=$('#cs-env-series');if(!select)return;
+  const indexCodes=new Set(state.available_indices||[]),sectorCodes=new Set(state.available_sector_codes||[]);
+  const options=[...(state.indices||[]).filter(code=>indexCodes.has(code)).map(code=>({value:'index|'+code,label:'指数 · '+code})),...(state.sector_catalog||[]).filter(item=>sectorCodes.has(item.code)).map(item=>({value:'sector|'+item.code,label:'行业 · '+item.name+' '+item.code}))];
+  const previous=selectedSeries||select.value||'',next=options.some(item=>item.value===previous)?previous:options[0]?.value||'';
+  if(next!==previous){selectedSeries=next;resetSeries(next?'数据序列已更新，请读取K线':'当前没有可用历史序列');}
+  select.replaceChildren();for(const item of options){const option=document.createElement('option');option.value=item.value;option.textContent=item.label;select.append(option);}select.value=next;selectedSeries=next||null;
+  if(!seriesBusy)$('#cs-env-load').disabled=!selectedSeries;
+ }
+ function resetSeries(message){
+  seriesRequest++;seriesBusy=0;seriesData=null;clearHistoryChart();$('#cs-env-download').disabled=true;$('#cs-env-series-result').replaceChildren();$('#cs-env-series-status').textContent=message;$('#cs-env-load').disabled=!selectedSeries;
+ }
+ async function pollHistory(refresh=false){
+  const request=++historyRequest,button=$('#cs-env-refresh');if(button)button.disabled=true;
+  try{const state=await window.pywebview.api.get_environment_history(refresh);if(request!==historyRequest)return;historyState=state;if(summary)render();else renderHistory(state);}
+  catch(error){if(request===historyRequest)$('#cs-env-history').textContent='环境历史状态读取失败：'+error.message;}
+  finally{if(request===historyRequest&&button)button.disabled=false;}
+ }
  function clearHistoryChart(){if(historyChart){historyChart.remove();historyChart=null;}}
  function drawHistoryChart(bars){
   clearHistoryChart();const target=$('#cs-env-history-chart'),library=window.LightweightCharts;
   if(!target||!library)throw Error('TradingView K线组件未加载');
   historyChart=library.createChart(target,{autoSize:true,layout:{background:{type:'solid',color:'#fff'},textColor:'#58645f',attributionLogo:true},grid:{vertLines:{color:'#edf0ed'},horzLines:{color:'#edf0ed'}},crosshair:{mode:library.CrosshairMode.Normal},rightPriceScale:{borderColor:'#dfe5e1',minimumWidth:64},timeScale:{borderColor:'#dfe5e1',rightOffset:4,barSpacing:7,minBarSpacing:2,timeVisible:false},localization:{locale:'zh-CN'}});
   const candles=historyChart.addSeries(library.CandlestickSeries,{upColor:'#c74b4b',downColor:'#087b68',borderUpColor:'#c74b4b',borderDownColor:'#087b68',wickUpColor:'#c74b4b',wickDownColor:'#087b68',priceFormat:{type:'price',precision:2,minMove:.01}});
-  candles.setData(bars.map(row=>{const [year,month,day]=String(row[0]).split('-').map(Number);return {time:{year,month,day},open:Number(row[1]),high:Number(row[2]),low:Number(row[3]),close:Number(row[4])};}));
-  historyChart.timeScale().fitContent();
+  candles.setData(bars.map(row=>{const [year,month,day]=String(row[0]).split('-').map(Number);return {time:{year,month,day},open:Number(row[1]),high:Number(row[2]),low:Number(row[3]),close:Number(row[4])};}));historyChart.timeScale().fitContent();
  }
  async function loadSeries(){
-  const status=$('#cs-env-series-status'),result=$('#cs-env-series-result');if(!selectedSeries)return;const [kind,code]=selectedSeries.split('|');
-  status.textContent='正在读取完整历史K线…';$('#cs-env-load').disabled=true;
+  if(!selectedSeries||seriesBusy)return;const request=++seriesRequest,key=selectedSeries,[kind,code]=key.split('|');seriesBusy=request;seriesData=null;clearHistoryChart();$('#cs-env-download').disabled=true;$('#cs-env-series-result').replaceChildren();$('#cs-env-series-status').textContent='正在读取完整历史K线…';$('#cs-env-load').disabled=true;
   try{
-   seriesData=await window.pywebview.api.get_environment_kline(kind,code);const bars=seriesData.bars||[];if(!bars.length)throw Error('该序列没有历史K线');
-   status.textContent=`${seriesData.name||seriesData.code} · ${bars.length.toLocaleString()}根 · ${seriesData.first} 至 ${seriesData.as_of} · ${seriesData.source} · ${seriesData.adjustment}${seriesData.rejected_rows?` · 剔除异常${seriesData.rejected_rows}根`:''}`;
-   result.innerHTML=`<div id="cs-env-history-chart" class="env-history-chart" role="img" aria-label="${esc(seriesData.name||seriesData.code)}完整历史日K线"></div><div class="env-history-table-wrap"><table class="env-history-table"><thead><tr><th>日期</th><th>开盘</th><th>最高</th><th>最低</th><th>收盘</th><th>成交量</th></tr></thead><tbody>${bars.slice(-120).reverse().map(row=>`<tr>${row.map((value,index)=>`<td>${index===0?esc(value):Number(value).toLocaleString('zh-CN',{maximumFractionDigits:2})}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="section-caption">图表载入完整 ${bars.length.toLocaleString()} 根；表格显示最近120根，可导出完整CSV。</div>`;
+   const data=await window.pywebview.api.get_environment_kline(kind,code);if(request!==seriesRequest||key!==selectedSeries)return;
+   if(data?.ok===false)throw Error(data.message||'历史K线读取失败');
+   if(data.kind!==kind||String(data.code)!==code)throw Error('服务返回的序列与当前选择不匹配');
+   const bars=data.bars||[];if(!bars.length)throw Error('该序列没有历史K线');
+   if(bars.some(row=>!Array.isArray(row)||row.length<6||!Number.isFinite(Date.parse(row[0]))||row.slice(1,5).some(value=>!Number.isFinite(Number(value)))))throw Error('历史K线格式无效');
+   seriesData=data;$('#cs-env-series-status').textContent=`${data.name||data.code} · ${bars.length.toLocaleString()}根 · ${data.first} 至 ${data.as_of} · ${data.source} · ${data.adjustment}${data.rejected_rows?` · 剔除异常${data.rejected_rows}根`:''}`;
+   const safeName=esc(data.name||data.code);$('#cs-env-series-result').innerHTML=`<div id="cs-env-history-chart" class="env-history-chart" role="img" aria-label="${safeName}完整历史日K线"></div><div class="env-history-table-wrap"><table class="env-history-table"><thead><tr><th>日期</th><th>开盘</th><th>最高</th><th>最低</th><th>收盘</th><th>成交量</th></tr></thead><tbody>${bars.slice(-120).reverse().map(row=>`<tr>${row.map((value,index)=>`<td>${index===0?esc(value):Number(value).toLocaleString('zh-CN',{maximumFractionDigits:2})}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="section-caption">图表载入完整 ${bars.length.toLocaleString()} 根；表格显示最近120根，可导出完整CSV。</div>`;
    drawHistoryChart(bars);$('#cs-env-download').disabled=false;
-  }catch(error){seriesData=null;clearHistoryChart();status.textContent='读取失败：'+error.message;result.replaceChildren();}
-  finally{$('#cs-env-load').disabled=!selectedSeries;}
+  }catch(error){if(request===seriesRequest){seriesData=null;clearHistoryChart();$('#cs-env-series-status').textContent='读取失败：'+error.message;$('#cs-env-series-result').replaceChildren();}}
+  finally{if(request===seriesRequest){seriesBusy=0;$('#cs-env-load').disabled=!selectedSeries;}}
  }
  function downloadSeries(){if(!seriesData?.bars?.length)return;const header='date,open,high,low,close,volume',rows=seriesData.bars.map(row=>row.map(value=>'"'+String(value).replace(/"/g,'""')+'"').join(','));const blob=new Blob(['\ufeff'+header+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`liangce-${seriesData.kind}-${seriesData.code}-daily.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}
- async function load(force=false){init();if(!root||busy)return;busy=true;$('#cs-overview-time').textContent='正在读取指数和行业数据…';try{summary=await window.pywebview.api.get_market_overview(force);if(!summary?.ok)throw Error(summary?.message||'市场环境数据暂不可用');render();pollHistory();if(!timer)timer=setInterval(()=>{if(!root.hidden){load(false);pollHistory();}},30000);}catch(error){$('#cs-overview-time').textContent='更新失败：'+error.message;$('#cs-index-cards').innerHTML='<div class="empty-state">市场环境暂不可用</div>';}finally{busy=false;}}
- const boot=setInterval(()=>{init();if(root){clearInterval(boot);}},300);window.LiangceMarketOverview={show,load,state:()=>summary};
+ async function load(force=false){
+  init();if(!root||(busy&&!force))return;const request=++overviewRequest;const historyTask=pollHistory();
+  busy=true;if(!timer)timer=setInterval(()=>{if(active())load(false);},30000);
+  $('#cs-overview-time').textContent='正在读取指数和行业数据…';
+  try{const value=await window.pywebview.api.get_market_overview(force);if(request!==overviewRequest)return;if(!value?.ok)throw Error(value?.message||'市场环境数据暂不可用');summary=value;if(!historyState)historyState=value.environment_history||null;render();}
+  catch(error){if(request===overviewRequest){$('#cs-overview-time').textContent='更新失败：'+error.message;$('#cs-index-cards').innerHTML='<div class="empty-state">市场环境暂不可用</div>';}}
+  finally{if(request===overviewRequest)busy=false;}
+  return historyTask;
+ }
+ const boot=setInterval(()=>{init();if(root)clearInterval(boot);},300);window.LiangceMarketOverview={show,load,state:()=>summary};
 })();
